@@ -13,34 +13,39 @@ appBarZ = 10
 statusBarZ = 20
 navBarZ = 30
 
-cards = [
-	{
-		label: 'Card 1'
-	},
-	{
-		label: 'Card 2'
-	},
-	{
-		label: 'Card 3'
-	},
-	{
-		label: 'Card 4'
-	},
-	{
-		label: 'Card 5'
-	}
-]
 		
 #-----------------------------------------------
 # Classes
 
 #############
 # CARD
+
+class Cards extends Layer
+	constructor: (options={}) ->
+		super options
+		
+		@width = Screen.width
+		@height = Screen.height
+		@backgroundColor = 'transparent'
+		@items = options.data
+		@superLayer = options.superLayer
+		
+		@buildCards()
+		
+	buildCards: ->
+		for item, index in @items
+			
+			card = new Card
+				id: index
+				startY: 80				
+				superLayer: @superLayer.subLayers[0]
+				data: item
+		
 class Card extends Layer
 
 	constructor: (options={}) ->
 		
-		this.state = 0
+		@state = 0
 		
 		options.backgroundColor ?= "#fff"
 		options.borderRadius ?= "2px"
@@ -54,25 +59,25 @@ class Card extends Layer
 		options.x = gutter
 		options.y = gutter + options.startY
 		
-		if index %2 == 1
+		if options.id % 2 == 1
 			options.x = options.width + (gutter*2)
-		if index%2 == 0 && index !=0
+		if options.id % 2 == 0 && options.id !=0
 			row++
 		
 		options.y = options.startY + (options.height * row) + (gutter * (row + 1))
 				
-		this.startWidth = options.width
-		this.startHeight = options.height
-		this.startX = options.x
-		this.startY = options.y		
+		@startWidth = options.width
+		@startHeight = options.height
+		@startX = options.x
+		@startY = options.y		
 				
 		super options
 		
 		# Display
 		label = new Layer
-			superLayer: this
-			width: this.width
-			height: this.height
+			superLayer: @
+			width: @width
+			height: @height
 			backgroundColor: 'transparent'
 			x: 16
 			y: 5
@@ -92,22 +97,20 @@ class Card extends Layer
 			y: 10
 			opacity: 0
 			
-			superLayer: this
+			superLayer: @
 		# Events
-		this.on Events.Click, (event, card) ->
-			if this.state == 0
+		@on Events.Click, (event, card) ->
+			if @state == 0
 				@open()
-			
-		backButton.on Events.Click, (event,button) ->
-			this.superLayer.close()
+			else
+				@close()
 	
 	open: =>
 		console.dir "open"
-		this.state = 1
-		this.z = navBarZ - 1
-		this.superLayer.z = appBarZ + 1
-		
-		animation = this.animate
+		@state = 1
+		@z = navBarZ - 1
+		@superLayer.z = appBarZ + 1
+		animation = @animate
 			properties:
 				borderRadus: "0"
 				width: Screen.width
@@ -173,15 +176,15 @@ class Card extends Layer
 	
 	close: =>
 		console.dir "close"
-		this.state = 0
-		this.superLayer.animate
+		@state = 0
+		@superLayer.animate
 			properties:
 				z: contentZ
 			time: time
-		animation = this.animate
+		animation = @animate
 			properties:
-				width: this.startWidth
-				height: this.startHeight
+				width: @startWidth
+				height: @startHeight
 				x: this.startX
 				y: this.startY
 				z: contentZ
@@ -346,26 +349,17 @@ class SideNav extends Layer
 		# Events
 		this.draggable.enabled = true
 		this.draggable.speedY = 0
+		this.draggable.speedX = 0.2
 		this.on Events.DragEnd, (event, object) ->
-			if (object.x < -50)
-				object.animate
-					properties:
-						x: -object.width
-						shadowX: 0
-						shadowBlur: 0
-					time: time
-					curve: curve
+			if (object.x < -20)
+				@close()
 			else
-				object.animate
-					properties:
-						x: 0
-						y: 0
-					time: time
-					curve: curve
+				@open()
+	
 	open: =>
 		this.state = 1
 		
-		animation = this.animate
+		animation = @animate
 			properties:
 				x: 0
 				y: 0
@@ -373,6 +367,15 @@ class SideNav extends Layer
 				shadowBlur: 20
 			curve: curve
 			time: time
+	
+	close: =>
+		animation = @animate
+			properties:
+				x: -@width
+				shadowX: 0
+				shadowBlur: 0
+			time: time
+			curve: curve
 		
 		
 #############	
@@ -423,8 +426,22 @@ sideNav = new SideNav
 	z: navBarZ - 1
 	superLayer: dashboard
 
-for data, index in cards
-	card = new Card
-		data: data
-		startY: 80
-		superLayer: dashboard.subLayers[0]
+cards = new Cards
+	data: 
+		[{
+			label: 'Card 1'
+		},
+		{
+			label: 'Card 2'
+		},
+		{
+			label: 'Card 3'
+		},
+		{
+			label: 'Card 4'
+		},
+		{
+			label: 'Card 5'
+		}]
+	superLayer: dashboard
+
