@@ -70,8 +70,18 @@ class Card extends Layer
 		@startHeight = options.height
 		@startX = options.x
 		@startY = options.y		
-				
+		
+		options.scale = .8
+		
 		super options
+		
+		# Animate in
+		animation = @animate
+			properties:
+				scale: 1
+			time: time
+			curve: curve
+			delay: options.id * .05
 		
 		# Display
 		label = new Layer
@@ -225,9 +235,7 @@ class AppBar extends Layer
 		options.shadowY ?= 1
 		options.shadowBlur ?= 3
 		options.shadowColor ?= "rgba(0, 0, 0, 0.25)"
-		
-		options.title ?= "Cards"
-		
+				
 		if options.theme == 'dark'
 			textColor = 'rgba(255,255,255,1)'
 		else
@@ -344,7 +352,19 @@ class SideNav extends Layer
 		options.shadowBlur = 0
 		options.shadowColor = "rgba(0, 0, 0, 0.25)"
 		
+		@links = options.links
+		
 		super options
+		
+		# Layers
+		@overlay = new Layer
+			backgroundColor: "rgba(0,0,0,.5)"
+			superLayer: @superLayer
+			width: @superLayer.width
+			height: @superLayer.height
+			z: @z-1
+			opacity: 0
+			ignoreEvents: true
 		
 		# Events
 		this.draggable.enabled = true
@@ -355,10 +375,18 @@ class SideNav extends Layer
 				@close()
 			else
 				@open()
+		
+		@buildLinks()
 	
 	open: =>
 		this.state = 1
 		
+		@overlay.animate
+			properties:
+				opacity: 1
+			time: time
+			curve: curve
+			
 		animation = @animate
 			properties:
 				x: 0
@@ -369,6 +397,12 @@ class SideNav extends Layer
 			time: time
 	
 	close: =>
+		@overlay.animate
+			properties:
+				opacity: 0
+			time: time
+			curve: curve
+			
 		animation = @animate
 			properties:
 				x: -@width
@@ -376,7 +410,31 @@ class SideNav extends Layer
 				shadowBlur: 0
 			time: time
 			curve: curve
+	
+	buildLinks: =>
+		for link, index in @links
+			link = new SideNavLink
+				superLayer: @
+				view: link.view
+				label: link.label
+				y: index * 40
 		
+class SideNavLink extends Layer
+	constructor: (options={}) ->
+		options.backgroundColor ?= "transparent"
+		options.color ?= "rgba(0,0,0,.5)"
+		options.width ?= options.superLayer.width
+		options.height ?= 40
+		super options
+		
+		@view = options.view
+		
+		@style =
+			fontSize: "16px"
+			lineHeight: @height + "px"
+			padding: "0 16px"
+
+		@html = options.label
 		
 #############	
 # VIEW
@@ -386,7 +444,7 @@ class View extends Layer
 		options.width ?= options.superLayer.width
 		options.height ?= options.superLayer.height
 		options.backgroundColor = "#f7f7f7"
-		
+		options.title ?= "Title"
 		super options
 		
 		content = new Content
@@ -395,37 +453,31 @@ class View extends Layer
 			z: contentZ
 		
 		appBar = new AppBar
+			title: options.title
 			name: 'appBar'
 			superLayer: this
 			z: appBarZ
+			theme: 'dark'
+			backgroundColor :'#965A97'
 		
 		statusBar = new StatusBar
 			name: 'statusBar'
 			superLayer: this
 			z: statusBarZ
-		
-		navBar = new Navbar
-			name: 'navBar'
-			superLayer: this
-			z: navBarZ
-	
 
-# DASHBOARD
 
 canvas = new Layer
 	width: 360
 	height: 640
 canvas.centerX()
 canvas.centerY()
-	
+
+
+# DASHBOARD
 dashboard = new View
 	superLayer: canvas
-
-sideNav = new SideNav
-	superLayer: canvas
-	z: navBarZ - 1
-	superLayer: dashboard
-
+	title: "Dashboard"
+	visible: true
 cards = new Cards
 	data: 
 		[{
@@ -445,3 +497,21 @@ cards = new Cards
 		}]
 	superLayer: dashboard
 
+# Navigation
+sideNav = new SideNav
+	superLayer: canvas
+	z: navBarZ - 1
+	superLayer: canvas
+	links: 
+		[{
+			label: "Dashboard"
+			view: dashboard
+		},
+		{
+			label: "Insights"
+			view: dashboard
+		}]
+navBar = new Navbar
+	name: 'navBar'
+	superLayer: canvas
+	z: navBarZ
