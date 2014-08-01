@@ -18,210 +18,6 @@ navBarZ = 30
 # Classes
 
 #############
-# CARD
-
-class Cards extends Layer
-	constructor: (options={}) ->
-		super options
-		
-		@width = Screen.width
-		@height = Screen.height
-		@backgroundColor = 'transparent'
-		@items = options.data
-		@superLayer = options.superLayer
-		
-		@buildCards()
-		
-	buildCards: ->
-		for item, index in @items
-			
-			card = new Card
-				id: index
-				startY: 80				
-				superLayer: @superLayer.subLayers[0]
-				data: item
-		
-class Card extends Layer
-
-	constructor: (options={}) ->
-		
-		@state = 0
-		
-		options.backgroundColor ?= "#fff"
-		options.borderRadius ?= "2px"
-		options.shadowX ?= 0
-		options.shadowY ?= 1
-		options.shadowBlur ?= 3
-		options.shadowColor ?= "rgba(0, 0, 0, 0.25)"
-		options.startY ?= 0
-		options.width ?= (options.superLayer.width / columns) - (gutter * 1.5)
-		options.height ?= (options.superLayer.width / columns) - (gutter * columns)		
-		options.x = gutter
-		options.y = gutter + options.startY
-		
-		if options.id % 2 == 1
-			options.x = options.width + (gutter*2)
-		if options.id % 2 == 0 && options.id !=0
-			row++
-		
-		options.y = options.startY + (options.height * row) + (gutter * (row + 1))
-				
-		@startWidth = options.width
-		@startHeight = options.height
-		@startX = options.x
-		@startY = options.y		
-		
-		options.scale = .8
-		
-		super options
-		
-		# Animate in
-		animation = @animate
-			properties:
-				scale: 1
-			time: time
-			curve: curve
-			delay: options.id * .05
-		
-		# Display
-		label = new Layer
-			superLayer: @
-			width: @width
-			height: @height
-			backgroundColor: 'transparent'
-			x: 16
-			y: 5
-			opacity: 0.4
-		label.style =
-			color: 'rgba(0,0,0,1)'
-			fontFamily: 'Roboto'
-			fontSize: '10pt'
-			fontWeight: '400'
-		label.html = options.data.label
-		
-		backButton = new Layer
-			image: 'images/back.png'
-			width: 16
-			height: 16
-			x: 16
-			y: 10
-			opacity: 0
-			
-			superLayer: @
-		# Events
-		@on Events.Click, (event, card) ->
-			if @state == 0
-				@open()
-			else
-				@close()
-	
-	open: =>
-		console.dir "open"
-		@state = 1
-		@z = navBarZ - 1
-		@superLayer.z = appBarZ + 1
-		animation = @animate
-			properties:
-				borderRadus: "0"
-				width: Screen.width
-				height: Screen.height
-				x: 0
-				y: 0
-			curve: curve
-			time: time
-		
-		# Highlight
-		Highlight = new Layer
-			backgroundColor: 'rgba(0,0,0,.03)'
-			borderRadius: '50%'
-			width: 10
-			height: 10
-			opacity: 1
-			ignoreEvents: true
-			superLayer: this
-		
-		Highlight.x = event.clientX - (this.superLayer.width/2)
-		Highlight.y = event.clientY - (this.superLayer.height/2) 
-		
-		highlightAnimation = Highlight.animate 
-			properties:
-				x: this.superLayer.x - 200
-				y: this.superLayer.y - 200
-				width: this.superLayer.width * 3
-				height: this.superLayer.height * 3
-				opacity: 1
-			time: .3
-			curve: 'ease'
-    
-    # Fade & Reset Highlight
-		highlightAnimation.on "end" , ->
-      Highlight.animate
-        properties:
-          opacity: 0
-        curve: curve
-				time: 0.06
-				x: Highlight.x - 10
-				y: Highlight.y - 10
-			Utils.delay 0.06, ->
-        Highlight.width = 80
-				Highlight.height = 80
-		
-		this.subLayers[0].animate
-			properties:
-				scale: 1.15
-				opacity: .5
-				x: 64
-				y: 48
-			curve: curve
-			time: time
-		
-		this.subLayers[1].animate
-			properties:
-				x: 16
-				y: 43
-				opacity: .6
-			curve: curve
-			time: time
-		
-	
-	close: =>
-		console.dir "close"
-		@state = 0
-		@superLayer.animate
-			properties:
-				z: contentZ
-			time: time
-		animation = @animate
-			properties:
-				width: @startWidth
-				height: @startHeight
-				x: this.startX
-				y: this.startY
-				z: contentZ
-			curve: curve
-			time: time
-		
-		this.subLayers[0].animate
-			properties:
-				scale: 1
-				opacity: .4
-				x: 10
-				y: 5
-			curve: curve
-			time: time
-		
-		this.subLayers[1].animate
-			properties:
-				x: 16
-				y: 10
-				opacity: 0
-			curve: curve
-			time: time
-			
-
-	layout: =>
-
-#############
 # APPBAR
 class AppBar extends Layer
 	constructor: (options={}) ->
@@ -331,12 +127,220 @@ class StatusBar extends Layer
 # CONTENT
 class Content extends Layer
 	constructor: (options={}) ->
-		
+		options.superLayer ?= canvas
 		options.backgroundColor ?= "transparent"
 		options.height ?= options.superLayer.height
 		options.width = options.superLayer.width
 		
 		super options
+	
+	build: ->
+	
+	destroy: ->
+		for layer in @subLayers
+			layer.destroy()
+
+#############
+# CARD
+
+class Cards extends Content
+	constructor: (options={}) ->
+		super options
+		
+		@items = options.data
+		@superLayer = options.superLayer
+		
+	build: ->
+		for item, index in @items
+			card = new Card
+				id: index
+				startY: 80				
+				superLayer: @superLayer.subLayers[0]
+				data: item
+	destroy: ->
+		row = 0
+		for layer in @subLayers
+			layer.destroy()
+		
+class Card extends Layer
+
+	constructor: (options={}) ->
+		
+		@state = 0
+		options.backgroundColor ?= "#fff"
+		options.borderRadius ?= "2px"
+		options.shadowX ?= 0
+		options.shadowY ?= 1
+		options.shadowBlur ?= 3
+		options.shadowColor ?= "rgba(0, 0, 0, 0.25)"
+		options.startY ?= 0
+		options.width ?= (options.superLayer.width / columns) - (gutter * 1.5)
+		options.height ?= (options.superLayer.width / columns) - (gutter * columns)		
+		options.x = gutter
+		options.y = gutter + options.startY
+		
+		if options.id % 2 == 1
+			options.x = options.width + (gutter*2)
+		if options.id % 2 == 0 && options.id !=0
+			row++
+		
+		options.y = options.startY + (options.height * row) + (gutter * (row + 1))
+				
+		@startWidth = options.width
+		@startHeight = options.height
+		@startX = options.x
+		@startY = options.y		
+		
+		options.scale = .8
+		options.opacity = 0
+		
+		super options
+		
+		# Animate in
+		animation = @animate
+			properties:
+				scale: 1
+				opacity: 1
+			time: time
+			curve: 'bezier-curve(.1,.6,.2,1)'
+			delay: options.id * .04
+		
+		# Display
+		label = new Layer
+			superLayer: @
+			width: @width
+			height: @height
+			backgroundColor: 'transparent'
+			x: 16
+			y: 5
+			opacity: 0.4
+		label.style =
+			color: 'rgba(0,0,0,1)'
+			fontFamily: 'Roboto'
+			fontSize: '10pt'
+			fontWeight: '400'
+		label.html = options.data.label
+		
+		backButton = new Layer
+			image: 'images/back.png'
+			width: 16
+			height: 16
+			x: 16
+			y: 10
+			opacity: 0
+			
+			superLayer: @
+		# Events
+		@on Events.Click, (event, card) ->
+			if @state == 0
+				@open()
+			else
+				@close()
+	
+	open: =>
+		console.dir "open"
+		@state = 1
+		@z = navBarZ - 1
+		@superLayer.z = appBarZ + 1
+		animation = @animate
+			properties:
+				borderRadus: "0"
+				width: Screen.width
+				height: Screen.height
+				x: 0
+				y: 0
+			curve: curve
+			time: time
+		
+		# Highlight
+		Highlight = new Layer
+			backgroundColor: 'rgba(0,0,0,.03)'
+			borderRadius: '50%'
+			width: 10
+			height: 10
+			opacity: 1
+			ignoreEvents: true
+			superLayer: this
+		
+		Highlight.x = event.clientX - (this.superLayer.width/2)
+		Highlight.y = event.clientY - (this.superLayer.height/2) 
+		
+		highlightAnimation = Highlight.animate 
+			properties:
+				x: this.superLayer.x - 200
+				y: this.superLayer.y - 200
+				width: this.superLayer.width * 3
+				height: this.superLayer.height * 3
+				opacity: 1
+			time: .3
+			curve: 'ease'
+    
+    # Fade & Reset Highlight
+		highlightAnimation.on "end" , ->
+      Highlight.animate
+        properties:
+          opacity: 0
+        curve: curve
+				time: 0.06
+				x: Highlight.x - 10
+				y: Highlight.y - 10
+			Utils.delay 0.06, ->
+        Highlight.width = 80
+				Highlight.height = 80
+		
+		this.subLayers[0].animate
+			properties:
+				scale: 1.15
+				opacity: .5
+				x: 64
+				y: 48
+			curve: curve
+			time: time
+		
+		this.subLayers[1].animate
+			properties:
+				x: 16
+				y: 43
+				opacity: .6
+			curve: curve
+			time: time
+	
+	close: =>
+		console.dir "close"
+		@state = 0
+		@superLayer.animate
+			properties:
+				z: contentZ
+			time: time
+		animation = @animate
+			properties:
+				width: @startWidth
+				height: @startHeight
+				x: this.startX
+				y: this.startY
+				z: contentZ
+			curve: curve
+			time: time
+		
+		this.subLayers[0].animate
+			properties:
+				scale: 1
+				opacity: .4
+				x: 10
+				y: 5
+			curve: curve
+			time: time
+		
+		this.subLayers[1].animate
+			properties:
+				x: 16
+				y: 10
+				opacity: 0
+			curve: curve
+			time: time
+			
+
+	layout: =>
 
 # MENU
 class SideNav extends Layer
@@ -376,7 +380,7 @@ class SideNav extends Layer
 			else
 				@open()
 		
-		@buildLinks()
+		@build()
 	
 	open: =>
 		this.state = 1
@@ -411,15 +415,17 @@ class SideNav extends Layer
 			time: time
 			curve: curve
 	
-	buildLinks: =>
+	build: =>
+		@startY = 100
 		for link, index in @links
 			link = new SideNavLink
 				superLayer: @
 				view: link.view
 				label: link.label
-				y: index * 40
+				y: (index * 40) + @startY
 		
 class SideNavLink extends Layer
+	
 	constructor: (options={}) ->
 		options.backgroundColor ?= "transparent"
 		options.color ?= "rgba(0,0,0,.5)"
@@ -436,6 +442,13 @@ class SideNavLink extends Layer
 
 		@html = options.label
 		
+		@on Events.Click, (event, link) ->
+			for layer in @view.superLayer.subLayers
+				layer.close()
+			@view.open()
+			@superLayer.close()
+			
+		
 #############	
 # VIEW
 class View extends Layer
@@ -447,12 +460,17 @@ class View extends Layer
 		options.title ?= "Title"
 		super options
 		
-		content = new Content
-			name: 'content'
-			superLayer: this
-			z: contentZ
+		if !options.content
+			@content = new Content
+				name: 'content'
+				superLayer: this
+				z: contentZ
+		else
+			@content = options.content
 		
-		appBar = new AppBar
+		@content.superLayer = @
+		
+		@appBar = new AppBar
 			title: options.title
 			name: 'appBar'
 			superLayer: this
@@ -460,11 +478,20 @@ class View extends Layer
 			theme: 'dark'
 			backgroundColor :'#965A97'
 		
-		statusBar = new StatusBar
+		@statusBar = new StatusBar
 			name: 'statusBar'
 			superLayer: this
 			z: statusBarZ
-
+		
+		@content.build()
+		
+	open: =>
+		@visible = true
+		@content.build()
+	
+	close: =>
+		@visible = false
+		@content.destroy()
 
 canvas = new Layer
 	width: 360
@@ -472,12 +499,12 @@ canvas = new Layer
 canvas.centerX()
 canvas.centerY()
 
+views = new Layer
+	width: 360
+	height: 640
+	superLayer: canvas
 
 # DASHBOARD
-dashboard = new View
-	superLayer: canvas
-	title: "Dashboard"
-	visible: true
 cards = new Cards
 	data: 
 		[{
@@ -491,12 +518,20 @@ cards = new Cards
 		},
 		{
 			label: 'Card 4'
-		},
-		{
-			label: 'Card 5'
 		}]
-	superLayer: dashboard
 
+dashboard = new View
+	superLayer: views
+	title: "Dashboard"
+	visible: true
+	content: cards
+	
+# LIST
+list = new View
+	title: "List"
+	superLayer: views
+	visible: false
+	
 # Navigation
 sideNav = new SideNav
 	superLayer: canvas
@@ -508,8 +543,8 @@ sideNav = new SideNav
 			view: dashboard
 		},
 		{
-			label: "Insights"
-			view: dashboard
+			label: "List"
+			view: list
 		}]
 navBar = new Navbar
 	name: 'navBar'
